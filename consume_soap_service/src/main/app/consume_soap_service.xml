@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/current/mule-cxf.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd">
+    <flow name="consume_soap_serviceFlow2" >
+        <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="8081" path="soapclient" doc:name="HTTP"/>
+        <flow-ref name="consume_soap_serviceFlow1" doc:name="Flow Reference"/>
+        <!-- <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="Catch Soap Fault &gt;&gt;&gt;&gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/>
+             <set-variable variableName="id" value="Invalid Request !!!" doc:name="Variable"/>
+  <expression-transformer expression="#[message.payload=&quot;&lt;soap:Envelope xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'&gt;\n  
+   &lt;soap:Body&gt;\n      &lt;soap:Fault&gt;\n      &lt;faultcode&gt;INVALID_REQUEST&lt;/faultcode&gt;\n      &lt;faultstring&gt;Invalid Request&lt;/faultstring&gt;\n      &lt;detail&gt;\n      &lt;ns4:Fault xmlns='http://services.test.com/schema/report/SendReport' xmlns:ns4='http://services.test.com/schema/common/Fault'&gt;\n      &lt;ns4:errCode&gt;-2&lt;/ns4:errCode&gt;\n      &lt;ns4:errorDesc&gt;System Fault&lt;/ns4:errorDesc&gt;\n      &lt;ns4:stackTrace&gt;Invalid Request.Please  ensure that you use the correct request header as per the schema&lt;/ns4:stackTrace&gt;\n      &lt;/ns4:Fault&gt;\n      &lt;/detail&gt;\n      &lt;/soap:Fault&gt;\n     &lt;/soap:Body&gt;\n    &lt;/soap:Envelope&gt;&quot;]" doc:name="Expression_Custom_Fault_Response"/>
+ 
+        </catch-exception-strategy> -->
+    </flow>
+    <sub-flow name="consume_soap_serviceFlow1" >
+        <!-- <set-payload value="#[{'173.194.36.39', ''}]" doc:name="Set Payload"/> -->
+        <component class="com.test.transeformer.ReqMapper" doc:name="Java"/>
+        <logger message="Before Client call &gt;&gt;&gt;&gt;&gt; #[payload]" level="INFO" doc:name="Logger"/>
+        <cxf:jaxws-client  serviceClass="com.test.sample.IP2GeoSoap"  doc:name="CXF" operation="ResolveIP" soapVersion="1.1">
+        
+        	<cxf:inFaultInterceptors>  
+				<spring:bean id="outfault" class="com.test.soap.interceptors.CustomSoapFault"/>
+			</cxf:inFaultInterceptors>   
+        </cxf:jaxws-client>
+        <logger message="REq &gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt; #[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger"/>
+        <logger message="Payload>>> #[payload]" level="INFO" doc:name="Logger" />
+       <!--  <expression-component doc:name="Expression"><![CDATA[payload='<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body><ResolveIP xmlns="http://ws1.cdyne.com/"><ipAddress>1173.194.36.39</ipAddress><licenseKey> </licenseKey></ResolveIP></soap:Body></soap:Envelope>']]></expression-component> -->
+        <http:outbound-endpoint exchange-pattern="request-response" address="http://ws.cdyne.com/ip2geo/ip2geo.asmx" doc:name="HTTP" contentType="application/soap+xml" encoding="UTF-8" method="POST">
+        <set-property propertyName="SOAPAction" value="http://ws.cdyne.com/ResolveIP" doc:name="SOAPAction"></set-property>
+        </http:outbound-endpoint>
+        <byte-array-to-string-transformer encoding="UTF-8"  doc:name="Byte Array to String" mimeType="application/x-compressed"/>
+        <logger message="After CXF client calll &gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/>
+        <!-- <component class="com.test.transeformer.ObjectToXml" doc:name="Java"/>
+        <mulexml:object-to-xml-transformer driverClass="com.thoughtworks.xstream.io.xml.DomDriver"  doc:name="Object to XML" returnClass="com.test.sample.ResolveIPResponse"/>
+        <logger message="response &gt;&gt;&gt;&gt;&gt;&gt;#[payload]" level="INFO" doc:name="Logger"/> -->
+    </sub-flow>
+</mule>

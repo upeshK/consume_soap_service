@@ -1,0 +1,6 @@
+/target/
+/.settings/
+/.studio/
+/mule-project.xml
+/.classpath
+/.project
